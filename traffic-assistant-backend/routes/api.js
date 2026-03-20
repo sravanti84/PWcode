@@ -100,4 +100,42 @@ router.post('/reports', async (req, res) => {
   res.json({ success: true, report: newReport });
 });
 
+// POST: Analyze multiple routes against community reports
+router.post('/analyze/route', async (req, res) => {
+  try {
+    const { routes, reports } = req.body;
+    
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+      As an Intelligent Traffic Assistant, compare these suggested driving routes against the real-time community reports.
+      
+      ROUTES:
+      ${JSON.stringify(routes)}
+      
+      COMMUNITY REPORTS (Accidents, Jams, etc.):
+      ${JSON.stringify(reports)}
+      
+      TASK:
+      1. Analyze if any route passes through or very near a reported incident location.
+      2. Provide a 'Verdict' recommendation for the user.
+      3. Format the response as JSON: { "recommended_route_index": number, "verdict": "string", "reasoning": "string" }.
+      
+      Example Verdict: "Route 1 is technically fastest, but there is a confirmed accident at its midpoint. We recommend Route 2 (Alternative) to avoid a potential 15-minute delay."
+      
+      Respond only in valid JSON.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    const jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const analysis = JSON.parse(jsonStr);
+
+    res.json({ success: true, analysis });
+  } catch (error) {
+    console.error('Route analysis error:', error);
+    res.status(500).json({ success: false, error: 'Failed to analyze routes' });
+  }
+});
+
 export default router;

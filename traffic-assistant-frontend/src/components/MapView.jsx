@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 
-const MapComponent = ({ reports, routeRequest }) => {
+const MapComponent = ({ reports, routeRequest, selectedRouteIndex, onRoutesFound }) => {
   const mapRef = useRef(null);
   const [map, setMap] = useState(null);
   const [markers, setMarkers] = useState([]);
-  const [directionsRenderer, setDirectionsRenderer] = useState(null);
+  const [directionsRenderers, setDirectionsRenderers] = useState([]);
 
-  // Default Center (e.g., Delhi, India or a general coordinates)
+  // Default Center
   const center = { lat: 28.6139, lng: 77.2090 };
   const zoom = 14;
 
@@ -31,14 +31,10 @@ const MapComponent = ({ reports, routeRequest }) => {
 
   useEffect(() => {
     if (map && reports) {
-      // Clear old markers
       markers.forEach(m => m.setMap(null));
-      
-      const newMarkers = reports.map((r, i) => {
-        // Offset coordinates slightly so overlapping reports show up independently for demo
+      const newMarkers = reports.map((r) => {
         const latOffset = (Math.random() - 0.5) * 0.01;
         const lngOffset = (Math.random() - 0.5) * 0.01;
-        
         return new window.google.maps.Marker({
           position: { lat: center.lat + latOffset, lng: center.lng + lngOffset },
           map: map,
@@ -49,50 +45,70 @@ const MapComponent = ({ reports, routeRequest }) => {
           animation: window.google.maps.Animation.DROP,
         });
       });
-
       setMarkers(newMarkers);
     }
   }, [map, reports]);
 
   useEffect(() => {
-    if (map && !directionsRenderer) {
-      const renderer = new window.google.maps.DirectionsRenderer({
-        map: map,
-        suppressMarkers: false,
-        polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 5 }
-      });
-      setDirectionsRenderer(renderer);
-    }
-  }, [map, directionsRenderer]);
-
-  useEffect(() => {
-    if (directionsRenderer && routeRequest) {
+    if (map && routeRequest) {
+      // Clear old renderers
+      directionsRenderers.forEach(r => r.setMap(null));
+      
       const directionsService = new window.google.maps.DirectionsService();
       directionsService.route(
         {
           origin: routeRequest.origin,
           destination: routeRequest.destination,
           travelMode: window.google.maps.TravelMode.DRIVING,
+          provideRouteAlternatives: true
         },
         (result, status) => {
           if (status === window.google.maps.DirectionsStatus.OK) {
-            directionsRenderer.setDirections(result);
+            const newRenderers = result.routes.map((route, index) => {
+              const renderer = new window.google.maps.DirectionsRenderer({
+                map: map,
+                directions: result,
+                routeIndex: index,
+                suppressMarkers: index !== 0, // Only show markers for primary or one route to avoid clutter
+                polylineOptions: {
+                  strokeColor: index === (selectedRouteIndex || 0) ? '#3b82f6' : '#94a3b8',
+                  strokeOpacity: index === (selectedRouteIndex || 0) ? 1.0 : 0.5,
+                  strokeWeight: index === (selectedRouteIndex || 0) ? 6 : 4,
+                  zIndex: index === (selectedRouteIndex || 0) ? 100 : 1
+                }
+              });
+              return renderer;
+            });
+            setDirectionsRenderers(newRenderers);
+            
+            if (onRoutesFound) {
+              onRoutesFound(result.routes.map(r => ({
+                summary: r.summary,
+                duration: r.legs[0].duration.text,
+                distance: r.legs[0].distance.text
+              })));
+            }
           } else {
-            console.error(`error fetching directions ${result}`);
-            alert('Could not calculate route. Please check the locations.');
+            console.error(`error fetching directions ${status}`);
+            alert('Could not calculate routes. Please check the locations.');
           }
         }
       );
     }
-  }, [directionsRenderer, routeRequest]);
+  }, [map, routeRequest, selectedRouteIndex]);
 
   return <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: '16px' }} />;
 };
 
-const MapView = ({ reports, routeRequest }) => {
+const MapView = ({ reports, routeRequest, selectedRouteIndex, onRoutesFound }) => {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', background: '#1e293b' }}>
-      <MapComponent reports={reports} routeRequest={routeRequest} />
+      <MapComponent 
+        reports={reports} 
+        routeRequest={routeRequest} 
+        selectedRouteIndex={selectedRouteIndex}
+        onRoutesFound={onRoutesFound}
+      />
     </div>
   );
 };

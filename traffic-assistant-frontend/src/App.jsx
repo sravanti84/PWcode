@@ -22,6 +22,10 @@ const render = (status) => {
 function AppContent({ reports, handleNewReport, routeRequest, setRouteRequest }) {
   const [fromLoc, setFromLoc] = useState('');
   const [toLoc, setToLoc] = useState('');
+  const [alternativeRoutes, setAlternativeRoutes] = useState([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+  const [smartVerdict, setSmartVerdict] = useState(null);
+  const [analyzingRoutes, setAnalyzingRoutes] = useState(false);
   
   const fromRef = useRef(null);
   const toRef = useRef(null);
@@ -45,7 +49,34 @@ function AppContent({ reports, handleNewReport, routeRequest, setRouteRequest })
 
   const handleRouteSearch = () => {
     if (fromLoc && toLoc) {
+      setAlternativeRoutes([]);
+      setSelectedRouteIndex(0);
+      setSmartVerdict(null);
       setRouteRequest({ origin: fromLoc, destination: toLoc });
+    }
+  };
+
+  const handleRoutesFound = async (routes) => {
+    setAlternativeRoutes(routes);
+    setAnalyzingRoutes(true);
+    
+    try {
+      const response = await fetch('https://traffic-assistant-backend-788713020207.us-central1.run.app/api/analyze/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ routes, reports })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSmartVerdict(data.analysis);
+        if (data.analysis.recommended_route_index !== undefined) {
+          setSelectedRouteIndex(data.analysis.recommended_route_index);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch AI verdict:', err);
+    } finally {
+      setAnalyzingRoutes(false);
     }
   };
 
@@ -87,6 +118,59 @@ function AppContent({ reports, handleNewReport, routeRequest, setRouteRequest })
           <Dashboard reports={reports} />
         </div>
 
+        {alternativeRoutes.length > 0 && (
+          <div className="glass-panel animate-fade-in" style={{ animationDelay: '0.1s', padding: '16px' }}>
+            <h3 style={{ marginBottom: '12px', fontSize: '1rem' }}>Route Options</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {alternativeRoutes.map((route, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => setSelectedRouteIndex(idx)}
+                  className={`route-option ${selectedRouteIndex === idx ? 'active' : ''}`}
+                  style={{ 
+                    padding: '10px', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer',
+                    background: selectedRouteIndex === idx ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                    border: `1px solid ${selectedRouteIndex === idx ? '#3b82f6' : 'transparent'}`,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                    <span>Route {idx + 1}</span>
+                    <span style={{ color: idx === 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                      {idx === 0 ? 'Fastest' : 'Alternative'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    {route.duration} • {route.distance}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {analyzingRoutes && (
+          <div className="glass-panel animate-fade-in" style={{ padding: '16px', background: 'rgba(59, 130, 246, 0.05)' }}>
+            <p style={{ fontSize: '0.85rem', color: '#60a5fa' }} className="animate-pulse">
+              🔍 AI Analyzing community reports for best path...
+            </p>
+          </div>
+        )}
+
+        {smartVerdict && (
+          <div className="glass-panel animate-fade-in" style={{ padding: '16px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6' }}>
+            <h3 style={{ fontSize: '0.9rem', marginBottom: '8px', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ✨ Smart Verdict
+            </h3>
+            <p style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{smartVerdict.verdict}</p>
+            <p style={{ fontSize: '0.75rem', marginTop: '8px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              Reason: {smartVerdict.reasoning}
+            </p>
+          </div>
+        )}
+
         <div className="glass-panel animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <ReportForm onSubmit={handleNewReport} />
         </div>
@@ -94,7 +178,12 @@ function AppContent({ reports, handleNewReport, routeRequest, setRouteRequest })
 
       {/* Main Map View */}
       <main className="map-container animate-fade-in" style={{ animationDelay: '0.3s' }}>
-        <MapView reports={reports} routeRequest={routeRequest} />
+        <MapView 
+          reports={reports} 
+          routeRequest={routeRequest} 
+          selectedRouteIndex={selectedRouteIndex}
+          onRoutesFound={handleRoutesFound}
+        />
       </main>
     </div>
   );
