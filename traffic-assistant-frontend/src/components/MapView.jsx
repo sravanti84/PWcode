@@ -89,24 +89,10 @@ const MapComponent = ({ reports, routeRequest }) => {
   return <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: '16px' }} />;
 };
 
-const render = (status) => {
-  if (status === Status.LOADING) return <div style={{ color: 'white', padding: '20px' }}>Loading Live Map...</div>;
-  if (status === Status.FAILURE) return <div style={{ color: 'white', padding: '20px' }}>Error loading mapping services.</div>;
-  return null;
-};
-
 const MapView = ({ reports, routeRequest }) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return <div style={{ color: 'white', padding: '20px' }}>Please provide VITE_GOOGLE_MAPS_API_KEY in frontend .env</div>;
-  }
-
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', background: '#1e293b' }}>
-      <Wrapper apiKey={apiKey} libraries={["places", "geometry"]}>
-        <MapComponent reports={reports} routeRequest={routeRequest} />
-      </Wrapper>
+      <MapComponent reports={reports} routeRequest={routeRequest} />
     </div>
   );
 };
