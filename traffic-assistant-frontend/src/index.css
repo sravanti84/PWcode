@@ -197,3 +197,29 @@ button.secondary:hover {
 .animate-fade-in {
   animation: fadeIn 0.4s ease forwards;
 }
+
+/* Route Selection */
+.route-option {
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.route-option:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.route-option.active {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+}
+
+/* Animations extra */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
