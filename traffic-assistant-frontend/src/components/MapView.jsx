@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 
-const MapComponent = ({ reports }) => {
+const MapComponent = ({ reports, routeRequest }) => {
   const mapRef = useRef(null);
   const [map, setMap] = useState(null);
   const [markers, setMarkers] = useState([]);
+  const [directionsRenderer, setDirectionsRenderer] = useState(null);
 
   // Default Center (e.g., Delhi, India or a general coordinates)
   const center = { lat: 28.6139, lng: 77.2090 };
@@ -53,6 +54,38 @@ const MapComponent = ({ reports }) => {
     }
   }, [map, reports]);
 
+  useEffect(() => {
+    if (map && !directionsRenderer) {
+      const renderer = new window.google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: false,
+        polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 5 }
+      });
+      setDirectionsRenderer(renderer);
+    }
+  }, [map, directionsRenderer]);
+
+  useEffect(() => {
+    if (directionsRenderer && routeRequest) {
+      const directionsService = new window.google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: routeRequest.origin,
+          destination: routeRequest.destination,
+          travelMode: window.google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === window.google.maps.DirectionsStatus.OK) {
+            directionsRenderer.setDirections(result);
+          } else {
+            console.error(`error fetching directions ${result}`);
+            alert('Could not calculate route. Please check the locations.');
+          }
+        }
+      );
+    }
+  }, [directionsRenderer, routeRequest]);
+
   return <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: '16px' }} />;
 };
 
@@ -62,7 +95,7 @@ const render = (status) => {
   return null;
 };
 
-const MapView = ({ reports }) => {
+const MapView = ({ reports, routeRequest }) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
@@ -71,8 +104,8 @@ const MapView = ({ reports }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', background: '#1e293b' }}>
-      <Wrapper apiKey={apiKey}>
-        <MapComponent reports={reports} />
+      <Wrapper apiKey={apiKey} libraries={["places", "geometry"]}>
+        <MapComponent reports={reports} routeRequest={routeRequest} />
       </Wrapper>
     </div>
   );

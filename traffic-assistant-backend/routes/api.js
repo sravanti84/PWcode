@@ -28,29 +28,61 @@ const mockReports = [
   { id: 1, type: 'Congestion', text: 'Heavy traffic near the north gate', lat: 28.6139, lng: 77.2090, timestamp: new Date() }
 ];
 
-// POST: Analyze text input via Gemini
+// POST: Analyze report (text + optional image) via Gemini
 router.post('/analyze/text', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, image } = req.body;
     
-    // We prompt Gemini to act as a traffic analyzer
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `Analyze this user traffic report: "${text}". 
+    
+    let promptParts = [
+      `Analyze this user traffic report: "${text}". 
       Extract the following JSON structure: 
-      { "severity": "low/medium/high", "type": "accident/congestion/roadblock/other", "location_clue": "string", "recommendation": "string" }.
-      Respond ONLY in valid JSON.`;
+      { "severity": "low/medium/high", "type": "accident/congestion/roadblock/other", "location_clue": "string", "recommendation": "string", "is_image_relevant": boolean, "rejection_reason": "string" }.
+      
+      CRITICAL RULES:
+      1. If the report type is 'accident' or 'congestion', an image MUST be provided.
+      2. If an image is provided, verify if it is a real street-level photo relevant to a traffic incident.
+      3. If the image is unrelated (e.g., a pet, food, indoor shot), set "is_image_relevant" to false and provide a reason.
+      4. Respond ONLY in valid JSON.`
+    ];
 
-    const result = await model.generateContent(prompt);
+    if (image) {
+      const base64Data = image.split(",")[1] || image;
+      promptParts.push({
+        inlineData: {
+          data: base64Data,
+          mimeType: "image/jpeg" // Defaulting to jpeg, frontend usually sends this
+        }
+      });
+    } else {
+      // Check if text implies accident/congestion but no image was provided
+      const lowerText = text.toLowerCase();
+      if (lowerText.includes('accident') || lowerText.includes('jam') || lowerText.includes('traffic') || lowerText.includes('congestion')) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "A photo is mandatory for reporting accidents or heavy traffic jams." 
+        });
+      }
+    }
+
+    const result = await model.generateContent(promptParts);
     const responseText = result.response.text();
     
-    // Parse the JSON strictly from Gemini response
     const jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const analysis = JSON.parse(jsonStr);
+
+    if (image && analysis.is_image_relevant === false) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Photo Rejected: ${analysis.rejection_reason || "The uploaded image does not appear to be a relevant traffic photo."}`
+      });
+    }
 
     res.json({ success: true, analysis });
   } catch (error) {
     console.error('Gemini error:', error);
-    res.status(500).json({ success: false, error: 'Failed to analyze text' });
+    res.status(500).json({ success: false, error: 'Failed to analyze report' });
   }
 });
 

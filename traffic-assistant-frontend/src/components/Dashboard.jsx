@@ -11,21 +11,23 @@ const Dashboard = ({ reports }) => {
         <span className="badge warning">Active</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
-          <div className="flex-between" style={{ marginBottom: '8px', color: 'var(--text-muted)' }}>
-            <span>Total Reports</span>
-            <TrendingUp size={16} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ background: 'rgba(255,255,255,0.08)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+          <div className="flex-between" style={{ marginBottom: '12px', color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: '500', letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.75rem' }}>Total Reports</span>
+            <TrendingUp size={18} />
           </div>
-          <h3 style={{ fontSize: '1.8rem', margin: 0 }}>{reports.length}</h3>
+          <h3 style={{ fontSize: '2.2rem', margin: 0, fontWeight: '700' }}>{reports.length}</h3>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cumulative traffic data</p>
         </div>
 
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '16px', borderRadius: '12px' }}>
-          <div className="flex-between" style={{ marginBottom: '8px', color: 'var(--danger)' }}>
-            <span>Critical</span>
-            <AlertCircle size={16} />
+        <div style={{ background: 'rgba(239, 68, 68, 0.15)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.3)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+          <div className="flex-between" style={{ marginBottom: '12px', color: 'var(--danger)' }}>
+            <span style={{ fontWeight: '500', letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.75rem' }}>Critical Issues</span>
+            <AlertCircle size={18} />
           </div>
-          <h3 style={{ fontSize: '1.8rem', margin: 0, color: 'var(--danger)' }}>{criticalCount}</h3>
+          <h3 style={{ fontSize: '2.2rem', margin: 0, color: 'var(--danger)', fontWeight: '700' }}>{criticalCount}</h3>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.7rem', color: 'rgba(239, 68, 68, 0.7)' }}>Needs immediate attention</p>
         </div>
       </div>
 
